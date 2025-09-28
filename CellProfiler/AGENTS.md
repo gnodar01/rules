@@ -8,18 +8,18 @@
 ## Build/Test Commands
 ```bash
 # Install dependencies (use pixi)
-pixi install --environment=dev
+pixi install -e dev
 
 # Activate virtual environment
-pixi shell --environment=dev # also does install if necessary
+pixi shell -e dev # also does install if necessary
 
 # Run tests
-pytest tests/frontend tests/core tests/library  # All tests
-pytest tests/frontend/modules/test_align.py  # Single test file
-pytest tests/core -k "test_pipeline" -v  # Pattern match tests
+pixi run -e dev pytest tests/frontend tests/core tests/library  # All tests
+pixi run -e dev pytest tests/frontend/modules/test_align.py  # Single test file
+pixi run -e dev pytest tests/core -k "test_pipeline" -v  # Pattern match tests
 
 # Run CellProfiler
-pixi run cp
+pixi run -e dev cp
 ```
 
 ## Project Structure
