@@ -1,5 +1,10 @@
 # CellProfiler Development Guide for AI Agents
 
+## General Concepts
+
+- A **CellProfiler Module** is not a python module meant to be importable, but rather an instance of the **Module** class, forming a unit of a **CellProfiler Pipeline** (like a node in a DAG) that takes inputs of images, objects, or measurements from previous **CellProfiler Modules**, and produces outputs of images, objects, and/or measurements for subsequent **CellProfiler Modules**.
+- A **CellProfiler Module** has parameters/settings that affect how it operates on inputs.
+
 ## Build/Test Commands
 ```bash
 # Install dependencies (use pixi)
