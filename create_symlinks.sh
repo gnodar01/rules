@@ -22,7 +22,7 @@ find "$SOURCE_DIR" -type f -print0 | while IFS= read -r -d '' file; do
   rel_path="${file#"$SOURCE_DIR/"}"
   target_file="$TARGET_ROOT/$rel_path"
   mkdir -p "$(dirname "$target_file")"
-  ln -sf "$PWD/$file" "$target_file"
+  ln -sf "$PWD/${file#./}" "$target_file"
 done
 
 echo "Symlinks created successfully"
