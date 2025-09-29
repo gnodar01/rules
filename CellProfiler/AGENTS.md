@@ -23,11 +23,15 @@ pixi run -e dev cp
 ```
 
 ## Project Structure
-- `src/frontend` - Frontend package contianing code related to the CellProfiler GUI (using `wxPython`) and CLI, as well as code for CellProfiler modules
-- `src/frontend/cellprofiler/modules` - CellProfiler modules for each module and, its settings, and lifecylcle methods (e.g. `run`)
-  - The mathematical and image processing logic is currently in progress of being moved to the `cellprofiler_library` subpackage
-- `src/subpackages/core` - The core package acting as the engine for CellProfiler; contains the pipeline system (which sets up and runs modules), the measurements, the image readers, the concurrency system (threading and multiprocessing), workspace, image set classes, utilities, and more.
-- `src/subpackages/library` - An in-progress package containing all of the mathematical and image processing logic for modules to use
+- `src/frontend` - Code for `cellprofiler`; frontend package contianing code related to the CellProfiler GUI (using `wxPython`) and CLI, as well as code for CellProfiler modules.
+    - `src/frontend/cellprofiler/modules` - CellProfiler modules for each module and, its settings, and lifecylcle methods (e.g. `run`).
+      - The mathematical and image processing logic is currently in progress of being moved to the `cellprofiler_library` subpackage.
+- `src/subpackages/core` - Code for `cellprofiler_core`; the core package acting as the engine for CellProfiler, which contains the pipeline system (which sets up and runs modules), the measurements, the image readers, the concurrency system (threading and multiprocessing), workspace, image set classes, utilities, and more.
+- `src/subpackages/library` - Code for `cellprofiler_library`; an in-progress package containing all of the mathematical and image processing logic for modules to use.
+- `distribution` - Scripts, assets, and configuration files for bundling the application for distribution to macOS, linux, windows, and docker.
+- `tests/frontend` - Unit and integration tests for frontend code, `cellprofiler`.
+- `tests/core` - Unit and integration tests for `cellprofiler_core`.
+- `tests/library` - Unit and integration tests for `cellprofiler_library`.
 - Ignore the following folders and files:
   * `.pixi/`
   * `.git/`
