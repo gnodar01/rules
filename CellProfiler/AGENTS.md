@@ -28,6 +28,18 @@ pixi run -e dev cp
   - The mathematical and image processing logic is currently in progress of being moved to the `cellprofiler_library` subpackage
 - `src/subpackages/core` - The core package acting as the engine for CellProfiler; contains the pipeline system (which sets up and runs modules), the measurements, the image readers, the concurrency system (threading and multiprocessing), workspace, image set classes, utilities, and more.
 - `src/subpackages/library` - An in-progress package containing all of the mathematical and image processing logic for modules to use
+- Ignore the following folders and files:
+  * `.pixi/`
+  * `.git/`
+  * `pixi.lock`
+  * `flake.lock`
+  * `flike.nix`
+  * `nix/`
+  * `scripts/`
+  * `.vscode/`
+  * `.pytest_cache/`
+  * `**/*.egg-info/`
+  * `**/__pyacache__/`
 
 ## Code Style Guidelines
 - Python 3.9 required, type hints encouraged but not enforced
