@@ -14,9 +14,11 @@ Bilayers is an open-source specification designed to characterize software conta
 
 ## Project Structure
 
+The top level of this directory is a worktree containing multiple branches. The primary branch is `main`.
+
 ```
-bilayers/
-├── src/bilayers/                    # Core Python package
+bilayers/main
+├── src/bilayers/                    # Core Python package in the main branch
 │   ├── algorithms/                  # Algorithm implementations
 │   │   ├── classical_segmentation/  # Example algorithm
 │   │   ├── cellpose_inference/      # Algorithm wrappers
@@ -36,7 +38,7 @@ bilayers/
 ## Configuration System
 
 ### Core Files
-- **`pyproject.toml`**: Package metadata, dependencies, tooling configuration
+- **`pyproject.toml`**: Package metadata, dependencies, tooling configuration, pixi package manager
 - **`noxfile.py`**: Task automation and session management
 - **`myst.yml`**: Documentation configuration
 - **Algorithm `config.yaml`**: Algorithm specifications
@@ -48,44 +50,7 @@ bilayers/
 
 ## Algorithm Configuration Pattern
 
-Each algorithm follows a standard structure:
-
-```yaml
-citations:
-  - name: "Algorithm Name"
-    doi: "DOI or reference"
-    license: "License type"
-    description: "Brief description"
-
-docker_image:
-  org: "dockerhub_org"
-  name: "image_name"
-  tag: "version"
-  platform: "linux/arm64"
-
-algorithm_folder_name: "folder_name"
-
-exec_function:
-  name: "generate_cli_command"
-  cli_command: "python -m module_name"
-  hidden_args: {}
-
-inputs:
-  - name: input_name
-    type: image
-    label: "User-friendly label"
-    # ... detailed configuration
-
-outputs:
-  - name: output_name
-    type: image
-    # ... configuration
-
-parameters:
-  - name: param_name
-    type: radio|float|textbox|dropdown|checkbox
-    # ... parameter configuration
-```
+Each algorithm follows a standard structure as specified in: `@tests/test_config/validate_schema.yaml`
 
 ## Code Patterns and Conventions
 
