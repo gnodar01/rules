@@ -16,8 +16,11 @@ Bilayers is an open-source specification designed to characterize software conta
 
 The top level of this directory is a worktree containing multiple branches. The primary branch is `main`.
 
+You (the agent) will sometimes be in the top level of the worktree, in which case you may create new branches and work within them, and you may not delete or modify contents in pre-existing branches.
+Sometimes you (the agent) will be in a specific branch, in which case you must only work within that branch, and never create new ones, or modify the contents of another branch.
+
 ```
-bilayers/main
+bilayers/<branch_name>
 ├── src/bilayers/                    # Core Python package in the main branch
 │   ├── algorithms/                  # Algorithm implementations
 │   │   ├── classical_segmentation/  # Example algorithm
