@@ -7,7 +7,7 @@ this branch window:
 - `measureobjectneighbors` (`e533479a1` .. `9880bd09c`)
 - `measureimagequality` (freshest; `88be5a7dd` .. `53b2372ff`)
 
-Goal: move math / image-processing / measurement-producing logic out of
+Goal: move math / image-processing / measurement- and statistics-producing logic out of
 `src/frontend/cellprofiler/modules/<name>.py` into `cellprofiler_library`.
 The frontend module becomes a thin "settings + workspace plumbing" layer.
 
@@ -23,19 +23,21 @@ Made explicit in commits `04dfbf391` and `a3d62913d` (both titled
 
 1. **Layer 1 - Pure math/image-processing functions**
    (`cellprofiler_library/functions/*.py`).
-   No CellProfiler awareness. Arrays in, arrays/dicts/tuples out. No
-   feature-name strings, no `LibraryMeasurements`, no enums. Decomposed
-   into small focused helpers. Lives in `functions/measurement.py`,
+   No CellProfiler awareness. Pure functions only.
+   Arrays in, arrays/dicts/tuples out. No feature-name strings,
+   no `LibraryMeasurements`, no enums. Decomposed into small
+   focused helpers. Lives in `functions/measurement.py`,
    `functions/segmentation.py`, `functions/object_processing.py`,
    `functions/image_processing.py`, or `functions/file_processing.py`.
 
 2. **Layer 2 - Library module entry point**
    (`cellprofiler_library/modules/_<name>.py`).
    One public `@validate_call`-decorated function named after the module
-   (`measureobjectsizeshape`, `measure_object_neighbors`, `measure_image_quality`
-   - prefer snake_case). Orchestrates Layer 1, formats feature names,
-   packs results into `LibraryMeasurements`. Optionally returns a
-   `<Name>DisplayData` pydantic model.
+   (`measureobjectsizeshape`, `measure_object_neighbors`, `measure_image_quality` - prefer snake_case).
+   Orchestrates Layer 1, formats feature names, packs results into
+   `LibraryMeasurements`.
+   If `<name>` starts with `measure`, should optionally return a
+   `<name>DisplayData` pydantic model, conditioned on the `return_visualization_data` argument.
 
 3. **Layer 3 - Frontend module**
    (`src/frontend/cellprofiler/modules/<name>.py`).
