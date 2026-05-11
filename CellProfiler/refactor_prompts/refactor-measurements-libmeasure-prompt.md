@@ -15,7 +15,7 @@ alwaysApply: false
 **IMPORTANT**: We are transitioning from primitive dictionaries to a Pydantic-based measurement model.
 
 ### LibraryMeasurements Class Overview
-Located at: `./src/subpackages/library/cellprofiler_library/measurement_model.py`, example usage at `~/Desktop/LibraryMeasurements/library_measurements_example.py`
+Located at: `./src/subpackages/library/cellprofiler_library/measurement_model.py`.
 
 The `LibraryMeasurements` class is a **drop-in replacement** for the core `Measurements` class with these key features:
 
@@ -95,16 +95,9 @@ Before writing code, you must:
    - Library Module: `src/subpackages/library/cellprofiler_library/modules/_measurexyz.py`
    - Library Functions: `src/subpackages/library/cellprofiler_library/functions/measurement.py`
 
-2. **Read Rules**: Thoroughly internalize the rules located in `~/Desktop/rules/`:
-   - **Primary Guide**: `~/Desktop/rules/refactoring-measuerment.mdc` (Architecture & Data Contract)
-   - **Patterns**: `~/Desktop/rules/library/modules/measurement-patterns.mdc` (Statistical Summaries)
-   - **General**: `~/Desktop/rules/file-organization.mdc` (File Rules)
-   - **Workflow**: `~/Desktop/rules/bot-refactoring-workflow.mdc` (Complete process)
-   - **Safety**: `~/Desktop/rules/safety-rules.mdc` (Algorithm preservation)
+2. **Map Data Flow**: In a detailed manner, map inputs (pixels, masks, settings) → algorithms → outputs (measurements, stats)
 
-3. **Map Data Flow**: Detailedly map inputs (pixels, masks, settings) → algorithms → outputs (measurements, stats)
-
-4. **Identify Processing Paths**: Determine if the module processes:
+3. **Identify Processing Paths**: Determine if the module processes:
    - Image-level measurements only
    - Object-level measurements only  
    - Both images AND objects (requires multiple library functions)
