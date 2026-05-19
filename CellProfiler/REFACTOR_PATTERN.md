@@ -53,6 +53,97 @@ Rule of thumb: the frontend module no longer imports `numpy`, `scipy`,
 `skimage`, or `centrosome`. Cleanup commits `558055fd1` and `069e71e4d`
 ratify this.
 
+### 1.1 The dependency rule (load-bearing)
+
+The package dependency graph is **one-way**:
+
+```
+frontend  --depends on-->  core  --depends on-->  library
+```
+
+`library` MUST NOT import from `core` or `frontend`. It does not know
+about — and cannot accept as parameters, attribute-access, or return
+values — any class defined in those layers, including:
+
+- `cellprofiler_core.measurement.Measurements`
+- `cellprofiler_core.image.Image`
+- `cellprofiler_core.object.Objects` / `ObjectSet`
+- `cellprofiler_core.workspace.Workspace`
+- Settings classes (`Choice`, `Binary`, `LabelSubscriber`, ...)
+
+That means a Layer-1 or Layer-2 function CANNOT:
+
+- Take a `workspace`, `measurements`, `image`, or `objects` argument.
+- Call `measurements.add_measurement(...)` directly.
+- Read `image.pixel_data` / `image.mask` / `objects.segmented` / `objects.ijv`
+  inside the library — the caller (Layer 3) must unwrap to `numpy` arrays
+  first and pass those in.
+- Return an `Image` or `Objects` instance.
+
+What library functions CAN take/return:
+
+- `numpy` arrays, `numpy.ma` masked arrays, scalars, `str`, `int`, `bool`,
+  `None`, plain `list` / `tuple` / `dict` of those.
+- `LibraryMeasurements` (defined in library, distinct from core's
+  `Measurements`).
+- Library-owned pydantic models (e.g. `<Name>DisplayData`).
+- Library-owned enums from `cellprofiler_library.opts.<name>`.
+
+Concrete unwrap pattern in the frontend:
+
+```python
+# Layer 3 (frontend run()):
+image    = workspace.image_set.get_image(image_name, must_be_grayscale=True)
+objects  = workspace.object_set.get_objects(object_name)
+centers  = workspace.object_set.get_objects(center_name) if center_name else None
+
+lib_measurements = <name>(
+    pixels                  = image.pixel_data,
+    image_mask              = image.mask if image.has_mask else None,
+    object_labels           = objects.segmented,
+    object_indices          = objects.indices,
+    center_labels           = centers.segmented if centers is not None else None,
+    image_name              = image_name,
+    object_name             = object_name,
+    ...
+)
+
+m = workspace.measurements
+for feature_name, value in lib_measurements.image.items():
+    m.add_image_measurement(feature_name, value)
+# ... etc.
+```
+
+Note: `LibraryMeasurements` is the *transport* across the library/core
+boundary. Helpers below the public Layer-2 entry point don't need to
+use it — they can return plain dicts, tuples, or pre-allocated arrays
+that the entry point (or the caller) assembles into the final
+`LibraryMeasurements`.
+
+### 1.2 Implication for Phase 2
+
+Phase 2 helpers live on the FE class and can still take `workspace`,
+`measurements`, etc. — they have not crossed the layer boundary yet.
+But before Phase 3 moves them down, **first scrub the helper signatures
+of every core/frontend type**: replace `workspace`/`measurements` with
+the specific arrays/dicts they need, replace `image` with
+`image.pixel_data` + `image.mask`, replace `objects` with
+`objects.segmented` + `objects.indices` (+ `objects.ijv` if needed).
+Helpers that previously wrote into `measurements` instead RETURN a
+dict / list of `(feature_name, value)` pairs (or a
+`LibraryMeasurements`); the frontend caller does the
+`m.add_measurement(...)` loop.
+
+Doing this scrub *while still in the frontend class* is mechanical and
+test-covered. Trying to do it *as part of* the move-to-library step
+makes the move both an algorithmic refactor and a relocation, and is
+much easier to get wrong.
+
+Lesson learned the hard way on `measureobjectintensitydistribution`:
+Phase-2 helpers were written with `workspace` / `measurements` params,
+then the naive Phase-3 move dragged those imports into the library file
+— breaking the dependency rule. Fix: scrub first, then move.
+
 ---
 
 ## 2. Canonical phased plan
@@ -83,6 +174,13 @@ cut-and-paste; no algorithmic change. This sets up phase 3.
 
 Refs: `a5244de1a`, `9dccd1e6d`.
 
+PRECONDITION (see section 1.2): the helpers being moved must already be
+free of `workspace`, `measurements`, `image`, `objects`, and any other
+core/frontend class. If they are not, do the scrub commit FIRST (as a
+small intermediate Phase 2 followup) — still on the FE class — and only
+then move. Moving and scrubbing in the same commit drags core imports
+into the library and breaks the dependency rule.
+
 - Cut helpers from the frontend class to free functions in
   `cellprofiler_library/modules/_<name>.py`.
 - Drop `self.` access by threading values in as parameters.
@@ -91,6 +189,14 @@ Refs: `a5244de1a`, `9dccd1e6d`.
 - Pure-math helpers go to `cellprofiler_library/functions/<category>.py`.
   Pick the right category (commit `8e23e0c2c` rebalanced
   `object_processing` -> `segmentation` for some helpers).
+- The library file imports `numpy`, `scipy`, `centrosome`, `skimage`,
+  `pydantic`, and other library-layer-safe modules. It must NOT import
+  from `cellprofiler_core.*` or `cellprofiler.*`.
+- Helpers that used to call `measurements.add_measurement(...)` instead
+  return a `dict[str, value]` (or list of `(name, value)` pairs, or a
+  `LibraryMeasurements`); the FE caller does the recording loop.
+- Helpers that used to call `workspace.image_set.add(name, Image(...))`
+  return arrays; the FE caller wraps them in `Image` and adds them.
 
 ### Phase (4): move the public function into the library; add type annotations
 
