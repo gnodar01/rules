@@ -189,6 +189,39 @@ into the library and breaks the dependency rule.
 - Pure-math helpers go to `cellprofiler_library/functions/<category>.py`.
   Pick the right category (commit `8e23e0c2c` rebalanced
   `object_processing` -> `segmentation` for some helpers).
+  - **Pure-math helper = no CellProfiler awareness:** no feature-name
+    strings, no `LibraryMeasurements`, no enums from `opts/<name>.py`,
+    no `image_name`/`object_name` arguments. Arrays in, arrays / plain
+    dicts / tuples out. Feature-name formatting and result packing
+    stay in `modules/_<name>.py`. If a helper currently uses an enum,
+    convert the call site so the enum comparison happens at the
+    Layer-2 boundary and the Layer-1 helper takes a plain string /
+    bool flag.
+  - **When porting helpers from a new module, add a header block to the
+    target `functions/*.py` file** marking the new section. House
+    style is a band of `#` characters above and below the module name,
+    matching the existing sections (`MeasureImageOverlap`,
+    `MeasureObjectSizeShape`, `MeasureColocalization`,
+    `MeasureObjectIntensity`, ...). Example:
+
+    ```python
+    ###############################################################################
+    # MeasureObjectIntensityDistribution
+    ###############################################################################
+
+    def compute_per_bin_distributions(...):
+        ...
+    ```
+
+    Reviewers scan for these headers to find each module's pure-math
+    surface. Append at the bottom of the file unless there is a clear
+    grouping reason to interleave.
+  - Don't skip this step. It is easy to leave pure-math helpers
+    parked in `modules/_<name>.py` after Phase 3 and never come back;
+    they then accumulate enum imports and become harder to move. Lesson
+    learned on `measureobjectintensitydistribution`: caught only after
+    Phase 5 ([AI Code]) was already in. Fix by promoting them in a
+    follow-up Phase-3 commit.
 - The library file imports `numpy`, `scipy`, `centrosome`, `skimage`,
   `pydantic`, and other library-layer-safe modules. It must NOT import
   from `cellprofiler_core.*` or `cellprofiler.*`.
