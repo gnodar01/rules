@@ -164,6 +164,51 @@ Phase-2 helpers were written with `workspace` / `measurements` params,
 then the naive Phase-3 move dragged those imports into the library file
 — breaking the dependency rule. Fix: scrub first, then move.
 
+### 1.3 Layer 2 without an owning module: shared measurement wrappers
+
+Everything above assumes Layer 2 lives in `modules/_<name>.py`, keyed to
+one frontend module. That assumption breaks for measurement logic that a
+core base class or utility function owns and many modules call into -
+`add_object_location_measurements` / `add_object_count_measurements` in
+`cellprofiler_core/utilities/core/module/identify.py`, `add_measurements`
+in `ImageSegmentation`/`ObjectProcessing`. There's no single module to name
+a `modules/_<name>.py` file after, but the code is still Layer 2 by this
+section's own definition: it constructs `LibraryMeasurements` and formats
+feature-name strings. Refs: #5117 (tracking issue) and the
+`library/core_measurements`, `library/object_location_measurements`,
+`library/object_count_measurements`, `library/object_processing_measurements`
+branches (#5118/#5122/#5124/#5127) that established this.
+
+Give this class of function its own package instead of either forcing a
+fake per-module file or leaving it in `functions/*.py` where it doesn't
+belong:
+
+- `cellprofiler_library/measurements/measurement_model.py` - `LibraryMeasurements`
+  itself, moved out of the package root.
+- `cellprofiler_library/measurements/wrappers.py` - the functions that build
+  and return `LibraryMeasurements` for these shared code paths. Same rigor
+  as any other Layer-2 entry point:
+  `@validate_call(config=ConfigDict(arbitrary_types_allowed=True))`, every
+  parameter `Annotated[<type>, Field(description="...")]`. The validation
+  discipline is a property of "this is a boundary other code calls into,"
+  not of "this belongs to one module."
+
+Naming: `wrap_<what>_measurements`, not `get_<what>_measurements` - `get_`
+reads like reading something that already exists, but these functions
+build a *new* `LibraryMeasurements` from raw arrays. A function that
+instead *queries* an existing `LibraryMeasurements` - `find_parents_of` in
+`functions/measurement.py` reads prior `Parent`/`Location` measurements to
+resolve a grandparent - is not a wrapper and stays in `functions/*.py`
+alongside the pure math. The dividing line is "does it construct output
+measurements," not "does it merely touch `LibraryMeasurements` at all."
+
+Core call sites keep their original `add_*` names and delegate:
+`add_object_location_measurements(measurements, object_name, labels, object_count)`
+in `identify.py` calls
+`wrap_object_location_measurements(object_name, labels, object_count)` and
+threads the result into the workspace via
+`add_library_measurements_to_workspace_measurements` (section 5).
+
 ---
 
 ## 2. Canonical phased plan
@@ -300,12 +345,15 @@ in. Typical themes (all documented in section 7):
 src/subpackages/library/cellprofiler_library/
   opts/<name>.py              # enums, constants, TemplateMeasurementFormat
   modules/_<name>.py          # public library entry point + DisplayData
-  functions/measurement.py    # pure-math per-feature helpers
+  measurements/
+    measurement_model.py      # LibraryMeasurements (do not edit per-module)
+    wrappers.py                # wrap_* : Layer-2 measurement-builders with no owning module (see section 1)
+  functions/measurement.py    # pure-math per-feature helpers, plus LibraryMeasurements *query*
+                               #   helpers that don't construct output (e.g. find_parents_of)
   functions/segmentation.py   # label/segmentation helpers
   functions/object_processing.py
   functions/image_processing.py
   functions/file_processing.py
-  measurement_model.py        # LibraryMeasurements (do not edit per-module)
   types.py                    # ImageGrayscale, ObjectSegmentation, etc.
 src/frontend/cellprofiler/modules/<name>.py
 tests/frontend/modules/test_<name>.py
@@ -368,7 +416,7 @@ from typing import Annotated, Optional, List, Tuple, Union, Any
 from pydantic import BaseModel, Field, validate_call, ConfigDict
 
 from cellprofiler_library.types import ImageGrayscale, ImageGrayscaleMask  # etc.
-from cellprofiler_library.measurement_model import LibraryMeasurements
+from cellprofiler_library.measurements.measurement_model import LibraryMeasurements
 from cellprofiler_library.opts.<name> import Feature, C_<NAME>, ...
 from cellprofiler_library.functions.measurement import helper_one, helper_two
 
@@ -459,7 +507,7 @@ def run(self, workspace):
 ## 5. `LibraryMeasurements` integration
 
 Defined in
-`src/subpackages/library/cellprofiler_library/measurement_model.py`.
+`src/subpackages/library/cellprofiler_library/measurements/measurement_model.py`.
 
 Shape:
 - `image: Dict[str, Any]` - full image-feature names as keys.
@@ -667,6 +715,49 @@ extra computation needs) and its return type with the
 `run()` still only calls the one function; it just conditionally unpacks a
 2-tuple, exactly as it already does for `<Name>DisplayData`.
 
+### 7.15 Library importing measurement constants back from `cellprofiler_core` (`595da1ed7`)
+
+When a "move constants from core to library" commit lands
+(`opts/measurement.py` created from `cellprofiler_core/constants/measurement.py`),
+grep the rest of `cellprofiler_library/` for imports of the constants you
+just moved. `functions/measurement.py` kept
+`from cellprofiler_core.constants.measurement import FF_COUNT, FF_PARENT`
+even after `opts/measurement.py` defined both - library depending on core
+for something the library itself now owns, sitting a few lines above an
+import of the same constants from the correct place. Import from
+`opts/measurement.py` only.
+
+### 7.16 Duplicate constant definitions inside the library itself (`595da1ed7`)
+
+Not just core-vs-library: `measurement_model.py` had its own hardcoded
+`IMAGE_NUMBER`/`OBJECT_NUMBER`/`R_FIRST_OBJECT_NUMBER`/`R_SECOND_OBJECT_NUMBER`,
+predating and duplicating the same four constants `opts/measurement.py`
+was created to own. A "move X out of core" commit should also check
+whether X already has an undeclared second copy somewhere else in the
+library before declaring the move done.
+
+### 7.17 `assert` for a parameter that's only required conditionally (`6fa72ff86`)
+
+`add_library_measurements_to_workspace_measurements(workspace_measurements,
+library_measurements, module_num=None)` only needs `module_num` when
+`library_measurements` has relationships - most callers don't, so it
+defaults to `None`. Guarding that with
+`assert module_num is not None, "..."` inside the per-relationship loop is
+wrong twice over: `assert` is stripped when Python runs with `-O`, and a
+`None` module number flowing into `Measurements.add_relate_measurement`
+builds a bogus HDF5 group path rather than failing loudly. Use
+`if <condition>: raise ValueError(...)`, hoisted above the loop so it's
+checked once, not per relationship.
+
+### 7.18 Two implementations of the same measurement drift apart (`fed1c0758`)
+
+`wrap_image_segmentation_measurements` reimplemented the Image/Count
+measurement inline instead of calling `wrap_object_count_measurements`,
+and the inline copy dropped the `numpy.array([...], dtype=float)` wrap the
+other one keeps - same measurement, two code paths, one silently changed
+dtype. When a second function needs a measurement another wrapper already
+produces, call it and `.merge()` the result; don't recompute it inline.
+
 ---
 
 ## 8. Testing
@@ -687,6 +778,17 @@ Library-level unit tests exist for shared infrastructure
 module's library entry point - the frontend tests cover that transitively.
 The exception is changes that touch `LibraryMeasurements` itself; those
 get unit tests there.
+
+`measurements/wrappers.py` functions (section 1) are the same exception by
+extension: they have no single owning module, so no single
+`test_<name>.py` exercises them directly - coverage is whatever happens to
+call the core `add_*` function that delegates to them
+(`test_identifyprimaryobjects.py`, `test_relateobjects.py`, etc., plus
+every `ObjectProcessing`/`ImageSegmentation` subclass's tests). That's
+real coverage, but it's diffuse and depends on nobody deleting the "wrong"
+test later. Prefer adding direct unit tests for new `wrap_*` functions in
+`tests/library` rather than relying solely on the transitive frontend
+coverage.
 
 Run:
 ```bash
