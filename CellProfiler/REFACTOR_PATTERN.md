@@ -53,6 +53,26 @@ Rule of thumb: the frontend module no longer imports `numpy`, `scipy`,
 `skimage`, or `centrosome`. Cleanup commits `558055fd1` and `069e71e4d`
 ratify this.
 
+**Single-entrypoint constraint:** `run()` calls exactly ONE Layer-2 public
+function. Never two independent calls into `cellprofiler_library` from the
+same `run()`, even if one is conditional (e.g. gated behind a
+`wants_<x>.value` toggle). If a module needs a second, conditionally
+computed output beyond `LibraryMeasurements` - a relabeled segmentation to
+save as a new object set, a side image, whatever - fold it into the *same*
+public function using the established
+`Union[LibraryMeasurements, Tuple[LibraryMeasurements, <Extra>]]` shape
+(section 6 uses this for `<Name>DisplayData`; the same shape works for
+non-display extras - name the model for what it holds, e.g.
+`<Name>ChildObjects`, not `DisplayData`, when it isn't for `Module.display`).
+Gate the extra computation inside the library function with a boolean
+parameter (`wants_<x>: bool = False`), the same way `return_visualization_data`
+gates `<Name>DisplayData`. Any helper that only that computation needs
+(e.g. a relabeling step) becomes a private, non-`@validate_call` function
+in the same `modules/_<name>.py` file, or a Layer-1 function in
+`functions/*.py` - it is never a second function the frontend imports and
+calls directly. `run()` fans into the library at one point; the library
+fans out internally to as many Layer-1 helpers as it needs.
+
 ### 1.1 The dependency rule (load-bearing)
 
 The package dependency graph is **one-way**:
@@ -633,6 +653,20 @@ the same name, alias the imports as `_relate_labels`, `_relate_histogram`,
 Must be `Field(default_factory=list[Relationship])`, not bare `list`.
 Pydantic v2 wants the generic.
 
+### 7.14 Two library calls from one `run()` (relateobjects child-object save)
+
+Easy to reach for a second public function when a feature is conditional
+(e.g. "only compute this if the user wants child objects saved") - it
+feels self-contained, so it gets its own `@validate_call` function that
+`run()` imports and calls next to the main one. Don't: this violates the
+single-entrypoint constraint above. Instead extend the main public
+function's signature with the extra inputs it needs
+(`wants_child_objects_saved: bool = False`, plus whatever raw arrays the
+extra computation needs) and its return type with the
+`Union[LibraryMeasurements, Tuple[LibraryMeasurements, <Extra>]]` shape.
+`run()` still only calls the one function; it just conditionally unpacks a
+2-tuple, exactly as it already does for `<Name>DisplayData`.
+
 ---
 
 ## 8. Testing
@@ -705,6 +739,10 @@ One commit per phase, in order.
     passes through unchanged.
   - [ ] Delete `__str__` overrides on enum classes.
   - [ ] Delete TODOs that are now satisfied.
+  - [ ] Confirm `run()` makes exactly one call into `cellprofiler_library`.
+    Fold any conditional secondary output into the same public function's
+    `Union[LibraryMeasurements, Tuple[LibraryMeasurements, <Extra>]]`
+    return, rather than adding a second public function (see 7.14).
 - [ ] Run `pixi run -e dev pytest tests/frontend/modules/test_<name>.py`
   until green.
 - [ ] Open the PR. Commit subjects follow `[<name>] ...` and
