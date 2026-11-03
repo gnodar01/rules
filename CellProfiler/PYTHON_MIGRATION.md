@@ -1,4 +1,7 @@
 <!-- windows-patch-handoff-20261103 -->
+
+Receiving macOS checkout verification: all 12 patch files applied cleanly at the exact base. All 39 focused tests pass with native GUI access; all 14 source TIFF measurement strings match the Windows evidence exactly. Python/spec parsing, Ruff E9/F, release actionlint and whitespace checks pass. The initial sandbox run skipped 21 GUI cases and is superseded by the native run. Full scientific suites and a frozen macOS rebuild were not repeated. Results: `.migration-artifacts/windows-patch-apply-20261103/validation.json`. Changes remain unstaged and uncommitted; no GitHub push was performed.
+
 ## 2026-11-03 Windows development and validated patch handoff
 
 This checkpoint supersedes older instructions about Windows testing-only work or pushing changes. The user now authorizes local development/debugging and requests patchsets for application on the other machine. **Never perform Git pushes.** Leave changes uncommitted for the user's review; this session did not stage, commit, or push.
