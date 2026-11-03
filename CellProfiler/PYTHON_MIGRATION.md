@@ -1,8 +1,19 @@
 # Python migration handoff
 
-Updated 2026-10-30. Read the current handoff and execution plan first after a context reset. The latest user decisions below supersede conflicting historical notes, including the old Python minimum, Zarr 2 retention, cross-version classifier loading requirement, MySQL 8.4 pin, and assumption that python.app is necessary.
+Updated 2026-11-03. Read the current handoff and execution plan first after a context reset. The latest user decisions below supersede conflicting historical notes, including the old Python minimum, Zarr 2 retention, cross-version classifier loading requirement, MySQL 8.4 pin, and assumption that python.app is necessary.
 
 ## Current handoff for a cleared session
+
+### 2026-11-03 — Windows handoff fixes prepared on macOS
+
+This checkpoint supersedes older platform/profiling status below. The incoming Windows evidence is `.migration-artifacts/windows-fix-handoff-20261102/HANDOFF.md`; it tested commit `6d057449d`. The receiving branch has newer Linux work through `36bf8b5be`, which is preserved. Windows fixes are committed and pushed to `origin/unpin-python` as `528979936cdc95b2f44c7e378452e7e80574ebf0`; no native Windows acceptance is claimed.
+
+- Windows confirmed its frozen executable built but failed at startup with missing `centriole`. Its spec now resolves all four installed application source roots, explicitly collects Centriole submodules/native extensions, and anchors entrypoint/assets to those resolved paths. A new sanitized frozen `--help` check runs before installer creation in the release workflow.
+- Windows Java activation now uses `%CONDA_PREFIX%/Library/lib/jvm`. Unix MySQL compiler/linker/pkg-config activation is scoped to Unix; Windows continues to use its prebuilt mysqlclient wheel. Actual Windows Maven/JPype/installer behavior requires retesting.
+- User policy from the Windows session: the entire `profile` feature/environment is Unix-only. The manifest declares Linux and both macOS architectures; Pixi 0.80.0 regenerated the lock, removing Windows profile entries. Other environments retain Windows. Main Python 3.14, wxPython cap, Appose revision and scientific policies remain unchanged.
+- Local checks pass: lock consistency, declared platform coverage, all four package roots and six native extensions discoverable, executable-check success/failure status and environment isolation, actual Unix Memray capture/read, macOS Java 11 JVM start/call/shutdown and activation values, Ruff for the new checker, release workflow actionlint, and whitespace checks. No application algorithms/inputs/tolerances changed.
+- The Windows baseline had 4,148 passed /23 skipped /one timing benchmark failure; the benchmark passed in an isolated rerun. Preserve both results. Stale JPype/pyzmq cp39 wheels were repaired on the VM and are environment-upgrade residue, not application defects.
+- Remaining Windows verification: fresh locked dev/build/prod activation and JVM checks; frozen executable contents/startup with source/build tree hidden; relocated headless/GUI/parallel-worker/reader/database workflows; Java/JDK/jar and authentication DLL closure; Inno Setup installer and clean-machine acceptance. Do not infer these from macOS source checks or a successful PyInstaller build. Retest instructions are in `distribution/windows/README.md`; local result inventory is `.migration-artifacts/windows-fix-return-20261103/verification.json`.
 
 ### 2026-10-30 — macOS wheel repair and application relocation checkpoint
 
