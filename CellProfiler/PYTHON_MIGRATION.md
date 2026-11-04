@@ -1,3 +1,5 @@
+**Latest status — 2026-11-04:** The user reports successful GUI runs on all platforms and successful completion of all CI/CD workflows, with no issues. This supersedes older pending GUI and CI/CD validation notes below. See the latest checkpoint under Current handoff.
+
 <!-- windows-patch-handoff-20261103 -->
 
 Receiving macOS checkout verification: all 12 patch files applied cleanly at the exact base. All 39 focused tests pass with native GUI access; all 14 source TIFF measurement strings match the Windows evidence exactly. Python/spec parsing, Ruff E9/F, release actionlint and whitespace checks pass. The initial sandbox run skipped 21 GUI cases and is superseded by the native run. Full scientific suites and a frozen macOS rebuild were not repeated. Results: `.migration-artifacts/windows-patch-apply-20261103/validation.json`. Changes remain unstaged and uncommitted; no GitHub push was performed.
@@ -16,9 +18,16 @@ This checkpoint supersedes older instructions about Windows testing-only work or
 
 # Python migration handoff
 
-Updated 2026-11-03. Read the current handoff and execution plan first after a context reset. The latest user decisions below supersede conflicting historical notes, including the old Python minimum, Zarr 2 retention, cross-version classifier loading requirement, MySQL 8.4 pin, and assumption that python.app is necessary.
+Updated 2026-11-04. Read the current handoff and execution plan first after a context reset. The latest user decisions below supersede conflicting historical notes, including the old Python minimum, Zarr 2 retention, cross-version classifier loading requirement, MySQL 8.4 pin, and assumption that python.app is necessary.
 
 ## Current handoff for a cleared session
+
+### 2026-11-04 — User confirms cross-platform GUI and CI/CD validation
+
+- The user has run the GUIs on all platforms with no issues.
+- The user confirms that all CI/CD workflows now complete and pass with no issues.
+- Cross-platform GUI validation and CI/CD workflow execution are complete based on this user confirmation. Older statements that these checks remain pending are superseded; retain the earlier checkpoints as historical evidence.
+- This checkpoint records the user's results. No additional test runs were performed for this documentation update, and no specific workflow run IDs, artifact versions or additional scenario coverage were supplied.
 
 ### 2026-11-03 — Windows handoff fixes prepared on macOS
 
